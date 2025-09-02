@@ -1,0 +1,77 @@
+---
+title: "Case Study 1: Efficient Market Hypothesis"
+authors: "Benedikt, Elisa, & Steve"
+format: html
+#editor: visual
+---
+
+# Question 1: Exploring the "efficient market hypothesis"
+
+Let's start by cleaning the data as done in class.
+
+```{r waring=FALSE, message=FALSE}
+#read in data and clean it.
+#going to put it all in here because we did this in class
+fileurl <- 'cbblog12.html'
+x <- scan(fileurl, what = "", sep = "\n")
+x <- gsub('&#160;', '', x, fixed = TRUE)      # Simple search/replace, no magic
+x <- gsub('</span>', ',', x, fixed = TRUE)
+x <- gsub("<[^<>]*>", "", x) 
+y <- strsplit(x, ",")
+z <- y[sapply(y, length) == 7]
+zz <- matrix(unlist(z), ncol = 7, byrow = TRUE)
+scores <- strsplit(zz[, 5], "-")
+table(sapply(scores, length))
+scores <- matrix(as.numeric(unlist(scores)), ncol = 2, byrow = TRUE)
+ps <- as.numeric(zz[,4])   
+ps <- gsub("'", ".5", zz[,4])
+temp <- as.numeric(ps)
+ps[is.na(temp)] 
+ps <- as.numeric(gsub("P", 0, ps))
+x <- data.frame(pointspread = ps,
+                score1 = scores[,1],
+                score2 = scores[,2],
+                scorediff = scores[,2] - scores[,1],
+                loc = zz[,6],
+                stringsAsFactors = FALSE)
+```
+
+Let's plot the score differential against the pre-game point spread.
+
+```{r}
+plot(scorediff ~ pointspread, data = x,
+     xlab="Pre-Game Point Spread",
+     ylab="Actual Game Score Differential")
+abline(0, 1)    # Efficient market hypothesis
+```
+
+In terms of the efficient-market hypothesis, the pre-game point spread is expected to be an unbiased predictor for the actual game score differential. From the plot above, the point-cloud is scattered around the line y = x, validating the hypothesis, at least visually. Let's now fit a linear model and plot the regression line of the model to the data.
+
+```{r}
+lm.result <- lm(scorediff ~ pointspread, data=x)
+plot(scorediff ~ pointspread, data = x,
+     xlab="Pre-Game Point Spread",
+     ylab="Actual Game Score Differential")
+abline(lm.result, col="red", lwd=3)    # Evidence from the data
+```
+
+We see that the red regression line seems to overlap with the hypothetical line y = x, which again supports the efficient-market hypothesis. To test this with a formal hypothesis test, we examine the summary of the linear model.
+
+```{r}
+summary(lm.result2 <- lm(scorediff ~ pointspread, data=x))
+```
+
+We see that the predictor `pointspread` has an estimate of 1.024 and a p-value \< 2e-16, indicating that the predictor is statistically significant, and very close to 1. The intercept has an estimate of -0.1058 with a p-value of 0.442 \> 0.05, so we fail to reject the null hypothesis that the intercept is zero. Therefore, we can conclude that the linear model supports the efficient-market hypothesis.
+
+However in order to verify that the pre-game point spread is an unbiased estimator for the actual game score differential, we need to check if the residuals have mean zero. We can check this with plotting the residuals as an histogram.
+
+```{r}
+hist(lm.result$residuals, breaks = 20,
+     xlab = "Residuals",
+     main = "Histogram of Residuals")
+
+# print the mean of the residuals
+print(paste0("Mean of residuals: ", format(mean(lm.result$residuals), digits = 4, scientific = TRUE)))
+```
+
+The histogram does reveal that the residuals seem to have approximately mean zero. The computed mean is essentially zero. Hence, the linear model, does not reveal any evidence against the efficient-market hypothesis, and the pre-game point spread seems to be an unbiased estimator for the actual game score differential.

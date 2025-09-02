@@ -1,65 +1,8 @@
 ---
-title: "Case Study 1"
-authors: "Benedickt, Elisa, & Steve"
+title: "Case Study 1: NFL part"
+authors: "Benedikt, Elisa, & Steve"
 format: html
-editor: visual
 ---
-
-
-## Question 1
-
-The economists' "efficient market hypothesis"
-```{r waring=FALSE, message=FALSE}
-#read in data and clean it.
-#going to put it all in here because we did this in class
-fileurl <- 'cbblog12.html'
-x <- scan(fileurl, what = "", sep = "\n")
-x <- gsub('&#160;', '', x, fixed = TRUE)      # Simple search/replace, no magic
-x <- gsub('</span>', ',', x, fixed = TRUE)
-x <- gsub("<[^<>]*>", "", x) 
-y <- strsplit(x, ",")
-z <- y[sapply(y, length) == 7]
-zz <- matrix(unlist(z), ncol = 7, byrow = TRUE)
-scores <- strsplit(zz[, 5], "-")
-table(sapply(scores, length))
-scores <- matrix(as.numeric(unlist(scores)), ncol = 2, byrow = TRUE)
-ps <- as.numeric(zz[,4])   
-ps <- gsub("'", ".5", zz[,4])
-temp <- as.numeric(ps)
-ps[is.na(temp)] 
-ps <- as.numeric(gsub("P", 0, ps))
-x <- data.frame(pointspread = ps,
-                score1 = scores[,1],
-                score2 = scores[,2],
-                scorediff = scores[,2] - scores[,1],
-                loc = zz[,6],
-                stringsAsFactors = FALSE)
-```
-
-Now for the linear model and the graph provided in the first part.
-```{r}
-plot(scorediff ~ pointspread, data = x,
-     xlab="Pre-Game Point Spread",
-     ylab="Actual Game Score Differential")
-abline(0, 1)    # Efficient market hypothesis
-
-lm.result <- lm(scorediff ~ pointspread, data=x)
-abline(lm.result, col="red", lwd=3)
-```
-
-```{r}
-summary(lm.result2 <- lm(scorediff ~ pointspread, data=x))
-```
-
-### Q: What do you think about the economists' "efficient market hypothesis"?
-
-### A: The efficient market hypothesis suggests that the pre-game point spreads set by bookmakers should be unbiased predictors of the actual game score differentials. In other words, if the hypothesis holds true, we would expect the actual score differential to closely match the point spread on average. From the plot provided in part one, we can see that generally this is true. We can see this from the red line (the linear model fit) being close to the black line (the efficient market hypothesis line). 
-
-
-### Q: Using the linear model, above, with the data set assembled in this script, conduct a formal hypothesis test, with specific reference to a p-value that you think is helpful. Describe and defend (or criticise) it. If something concerns you, explain.
-
-### A: The null hypothesis (H0) for this test is that the coefficient for pointspread is equal to 1, which would indicate that the pre-game point spreads are unbiased predictors of the actual game score differentials. The alternative hypothesis (H1) is that the coefficient for pointspread is not equal to 1, suggesting that the pre-game point spreads are biased predictors. We can see that the linear model run above gives pointspread a coefficient of about 1. The p-value is < 2.2e-16, which clearly shows significance. This means we can reject the null hypothesis and conclude that there is a statistically significant relationship between the pre-game point spreads and the actual game score differentials. 
-
 
 # NFL PART
 
@@ -86,8 +29,6 @@ x <- gsub("<[^<>]*>", "", x)
 y <- strsplit(x, ";")
 y[23]
 ```
-
-
 
 ```{r}
 z <- y[sapply(y, length) == 6 | sapply(y, length) == 1]
@@ -121,9 +62,9 @@ df <- NULL
 # and team2 as the following rows from second element
 for (i in seq_along(z)) {
   if(length(z[[i]]) == 1 && !grepl("^\\(at", z[[i]])) {
-    team1 <- tolower(z[[i]])
+    team1 <- z[[i]]
   } else if(length(z[[i]]) == 6) {
-    team2 <- tolower(z[[i]][2])
+    team2 <- z[[i]][2]
     # if team2 is all caps (can have ".") set location to H otherwise A
     if (grepl("^[A-Z .]+$", team2)) {
       location <- "H"
@@ -134,12 +75,11 @@ for (i in seq_along(z)) {
     if (i < length(z) && grepl("^\\(at", z[[i+1]][1])) {
       location <- "N"
     }
-    df <- rbind(df, data.frame(team1 = team1, team2 = team2,
+    df <- rbind(df, data.frame(team1 = tolower(team1), team2 = tolower(team2),
                                location = location))
   } 
 }
 ```
-
 
 ```{r}
 #this block will find out the ot status (searches opponet name for "-ot")
@@ -155,8 +95,6 @@ for(i in 1:534){
 }
 ```
 
-
-
 ```{r}
 #block finds the scores of the games
 zz <- y[sapply(y, length) == 6]
@@ -168,7 +106,6 @@ scores <- strsplit(scores, "-")
 table(sapply(scores, length))
 scores <- matrix(as.numeric(unlist(scores)), ncol = 2, byrow = TRUE)
 ```
-
 
 ```{r}
 #fixing the dates
@@ -196,7 +133,6 @@ days <- sapply(wrong, `[`, 2)
 dates <- paste(months, days, sep = "/")
 ```
 
-
 ```{r}
 #this will make adding the pointspread and overunder easier
 #follow the same simple extraction technique and make into its own col
@@ -204,11 +140,26 @@ zz <- y[sapply(y, length) == 6]
 ps <- rep(NA, 534)
 for(i in 1:534){
   ps[i] <- zz[[i]][4]
+  ps[i] <- gsub("'", ".5", ps[i], fixed = TRUE)
+  ps[i] <- gsub("P", 0, ps[i])
+  ps[i] <- as.numeric(ps[i])
 }
 
+zz <- y[sapply(y, length) == 6]
+ps <- rep(NA, 534)
+for(i in 1:534){
+  ps[i] <- zz[[i]][4]
+  ps[i] <- gsub("'", ".5", ps[i], fixed = TRUE)
+  ps[i] <- gsub("P", 0, ps[i])
+  ps[i] <- as.numeric(ps[i])
+}
 ou <- rep(NA, 534)
 for(i in 1:534){
   ou[i] <- zz[[i]][6]
+  ou[i] <- gsub("o", "", ou[i], fixed = TRUE)
+  ou[i] <- gsub("u", "", ou[i], fixed = TRUE)
+  ou[i] <- gsub("n", "", ou[i], fixed = TRUE)
+  ou[i] <- gsub("'", ".5", ou[i], fixed = TRUE)
 }
 ```
 
@@ -223,57 +174,16 @@ x <- data.frame(date = dates,
                 season = season,
                 team1 = df$team1,
                 team2 = df$team2,
-                pointspread = ps,
+                pointspread = as.numeric(ps),
                 score1 = scores[,1],
                 score2 = scores[,2],
                 location = df$location,
                 overtime = ot,
-                overunder = ou,
+                overunder = as.numeric(ou),
                 stringsAsFactors = FALSE)
 ```
-
 
 ```{r}
 #write the csv to computer
 write.csv(x, "nfl_2017.csv", row.names = FALSE)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

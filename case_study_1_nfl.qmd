@@ -142,17 +142,10 @@ for(i in 1:534){
   ps[i] <- zz[[i]][4]
   ps[i] <- gsub("'", ".5", ps[i], fixed = TRUE)
   ps[i] <- gsub("P", 0, ps[i])
-  ps[i] <- as.numeric(ps[i])
+  #ps[i] <- as.numeric(ps[i])
 }
 
-zz <- y[sapply(y, length) == 6]
-ps <- rep(NA, 534)
-for(i in 1:534){
-  ps[i] <- zz[[i]][4]
-  ps[i] <- gsub("'", ".5", ps[i], fixed = TRUE)
-  ps[i] <- gsub("P", 0, ps[i])
-  ps[i] <- as.numeric(ps[i])
-}
+
 ou <- rep(NA, 534)
 for(i in 1:534){
   ou[i] <- zz[[i]][6]

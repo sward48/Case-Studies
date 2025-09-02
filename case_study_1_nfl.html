@@ -247,25 +247,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> zz[[i]][<span class="dv">4</span>]</span>
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"'"</span>, <span class="st">".5"</span>, ps[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"P"</span>, <span class="dv">0</span>, ps[i])</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(ps[i])</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ps[i] &lt;- as.numeric(ps[i])</span></span>
 <span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>zz <span class="ot">&lt;-</span> y[<span class="fu">sapply</span>(y, length) <span class="sc">==</span> <span class="dv">6</span>]</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>ps <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">534</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>ou <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">534</span>)</span>
 <span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">534</span>){</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> zz[[i]][<span class="dv">4</span>]</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"'"</span>, <span class="st">".5"</span>, ps[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"P"</span>, <span class="dv">0</span>, ps[i])</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  ps[i] <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(ps[i])</span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>ou <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="dv">534</span>)</span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">534</span>){</span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> zz[[i]][<span class="dv">6</span>]</span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"o"</span>, <span class="st">""</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"u"</span>, <span class="st">""</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"n"</span>, <span class="st">""</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"'"</span>, <span class="st">".5"</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> zz[[i]][<span class="dv">6</span>]</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"o"</span>, <span class="st">""</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"u"</span>, <span class="st">""</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"n"</span>, <span class="st">""</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  ou[i] <span class="ot">&lt;-</span> <span class="fu">gsub</span>(<span class="st">"'"</span>, <span class="st">".5"</span>, ou[i], <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#add the season (will all be 2017)</span></span>

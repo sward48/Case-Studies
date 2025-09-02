@@ -88,54 +88,6 @@ y[23]
 ```
 
 
-```{r}
-#This block will line up the teams
-z <- y[sapply(y, length) == 6 | sapply(y, length) == 1]
-
-# only keep rows with length 1 that have all capitalized letters or parentheses
-team_function <- function(v) {
-  if(length(v) == 1) {
-    grepl("^[A-Z &().]+$", v)
-  } else {
-    TRUE
-  }
-}
-z <- z[sapply(z, team_function)]
-
-# for lines with length 1, remove all parentheses and their contents
-for(i in seq_along(z)) {
-  if(length(z[[i]]) == 1) {
-    z[[i]] <- gsub("\\(.*?\\)", "", z[[i]])
-  }
-}
-
-for(i in seq_along(z)) {
-  if(length(z[[i]]) == 6) {
-    z[[i]] <- gsub("-ot", "", z[[i]])  }
-}
-
-title <- function(x) {
-  paste0(toupper(substring(x, 1, 1)),
-         tolower(substring(x, 2)))
-}
-
-# make an empty df with rownames team1 and team2
-df <- data.frame(team1 = character(),
-                 team2 = character())
-
-# loop through z and when length is 1, set team1 from the last row with length 1
-# and team2 as the following rows from second element
-for (i in seq_along(z)) {
-  if(length(z[[i]]) == 1) {
-    team1 <- title(z[[i]])
-  } else if(length(z[[i]]) == 6) {
-    team2 <- title(z[[i]][2])
-    df <- rbind(df, data.frame(team1 = team1, team2 = team2))
-  }
-}
-
-
-```
 
 ```{r}
 z <- y[sapply(y, length) == 6 | sapply(y, length) == 1]

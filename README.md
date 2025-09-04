@@ -1,2 +1,2 @@
 # Case-Studies
-team name: something cool
+team name: The Pandas Bears

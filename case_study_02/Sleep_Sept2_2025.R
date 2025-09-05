@@ -90,49 +90,26 @@ for (i in 1:length(days)) {
   x <- x[x$timehz <= 32400, ]
   y <- y[y$timehz <= 32400, ]
 
+  # get rid of angles greater than 180 degrees or less than -180 degrees
+  x <- x[x$angle >= -180 & x$angle <= 180, ]
+  y <- y[y$angle >= -180 & y$angle <= 180, ]
+
+  if (i == 5) {
+    # add two hours to the timehz of embletta
+    x$timehz <- x$timehz + 3600 * 2.5
+    # reverse the angle of itouch
+    y$angle <- - y$angle
+  } else if (i == 6) {
+    # add one hour to the timehz of embletta
+    x$timehz <- x$timehz + 3600 * 1.5
+    y$angle <- - y$angle
+  }
+
   sleep_data[[i]] <- list(Embletta = x, iTouch = y)
 }
 
 str(sleep_data)
 
-
-# plot all together in one PNG file
-# --------------------------------
-png("sleep_plots.png", width = 3000, height = 1500, res = 400)
-par(mfrow = c(2, 3))
-
-for (day in names(sleep_data)[1:6]) {   # loop over the 6 days
-  x <- sleep_data[[day]]$Embletta
-  y <- sleep_data[[day]]$iTouch
-  
-  # Embletta curve
-  plot(x$timehz, x$angle, type = "l", col = "blue",
-       xlab = "Hz time since 22:00", 
-       ylab = "Angle",
-       main = day)
-  
-  # iTouch curve
-  lines(y$timehz, y$angle, col = "red")
-}
-dev.off()
-# --------------------------------
-
-
-
-# plot one only
-# --------------------------------
-day_num <- 2
-x <- sleep_data[[day_num]]$Embletta
-y <- sleep_data[[day_num]]$iTouch
-
-# Embletta
-plot(x$timehz, x$angle, type = "l", col = "blue",
-     xlab = "Time since 22:00 (s)", ylab = "Angle",
-     main = "Embletta vs iTouch")
-lines(y$timehz, y$angle, col = "red")  #  iTouch
-legend("topright", legend = c("Embletta", "iTouch"),
-       col = c("blue", "red"), lty = 1)
-# --------------------------------
 
 
 #'
@@ -189,4 +166,52 @@ legend("topright", legend = c("Embletta", "iTouch"),
 #' things during class time), with a final assignment submission (group) due
 #' before class on Tuesday, September 9.
 #'
+
+
+# plot one only
+# --------------------------------
+day_num <- 6
+x <- sleep_data[[day_num]]$Embletta
+y <- sleep_data[[day_num]]$iTouch
+
+# Embletta
+plot(x$timehz, x$angle, type = "l", col = "blue",
+     xlab = "Time since 22:00 (s)", ylab = "Angle",
+     main = "Embletta vs iTouch")
+lines(y$timehz, y$angle, col = "red")  #  iTouch
+legend("topright", legend = c("Embletta", "iTouch"),
+       col = c("blue", "red"), lty = 1)
+# --------------------------------
+
+
+
+
+# plot all together in one PNG file
+# --------------------------------
+png("sleep_plots.png", width = 3000, height = 1500, res = 400)
+par(mfrow = c(2, 3))
+
+for (day in names(sleep_data)[1:6]) {   # loop over the 6 days
+  x <- sleep_data[[day]]$Embletta
+  y <- sleep_data[[day]]$iTouch
+
+  print(day)
+
+  if (day == "Nov23") {
+    day = paste(day, "embletta +2.5 hours")
+  } else if (day == "Nov24") {
+    day = paste(day, "embletta +1.5 hours")
+  }
+  
+  # Embletta curve
+  plot(x$timehz, x$angle, type = "l", col = "blue",
+       xlab = "Hz time since 22:00",
+       ylab = "Angle",
+       main = day)
+  
+  # iTouch curve
+  lines(y$timehz, y$angle, col = "red")
+}
+dev.off()
+# --------------------------------
 

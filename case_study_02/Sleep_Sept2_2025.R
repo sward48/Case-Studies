@@ -185,7 +185,7 @@ plot_day <- function(day_num) {
   # Embletta
   plot(x$secs, x$angle, type = "l", col = "blue",
        xlab = "Local Time", ylab = "Orientation (deg)",
-       xaxt = "n", yaxt = "n", main = paste("Following night of", day),
+       xaxt = "n", yaxt = "n", main = day,
        xlim = range(c(0, 32400)), ylim = range(c(-180, 180))) # Embletta
   lines(y$secs, y$angle, col = "red")  #  SomnoPose
 

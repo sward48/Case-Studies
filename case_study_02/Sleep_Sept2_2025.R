@@ -61,8 +61,8 @@ for (i in 1:length(days)) {
   x <- read.table(files[1], as.is = TRUE, skip = 1, header = FALSE)
   names(x) <- "angle"
 
-  # make timehz column from 10PM to 7AM at 10Hz
-  x$timehz <- seq(from = 0, to = (nrow(x)-1)*0.1, by = 0.1)
+  # make secs column from 10PM to 7AM at 10Hz
+  x$secs <- seq(from = 0, to = (nrow(x)-1)*0.1, by = 0.1)
   
   y <- read.csv(files[2], as.is = TRUE)
   names(y)[2] <- "angle"
@@ -70,9 +70,9 @@ for (i in 1:length(days)) {
   y_times <- strptime(paste(date, y$Time_of_day), format = "%Y-%m-%d %H:%M:%S")
 
   # handle the times by adding one day if not between 22:00:00 and 23:59:59
-  outside_evening <- !(format(y_times, "%H:%M:%S") >= "22:00:00" & 
+  after_midnight <- !(format(y_times, "%H:%M:%S") >= "22:00:00" & 
                      format(y_times, "%H:%M:%S") <= "23:59:59")
-  y_times[outside_evening] <- y_times[outside_evening] + 86400  # +1 day
+  y_times[after_midnight] <- y_times[after_midnight] + 86400  # +1 day
   
   # get start time in day and time format
   y_start_time <- strptime(paste(date,"22:00:00"), format = "%Y-%m-%d %H:%M:%S")
@@ -80,37 +80,44 @@ for (i in 1:length(days)) {
   # take difference in seconds from start_time to each time
   y_seconds  <- as.numeric(difftime(y_times, y_start_time, units = "secs"))
 
-  # assign timehz (in the same units as x) to y
-  y$timehz <- y_seconds
+  # assign secs (in the same units as x) to y
+  y$secs <- y_seconds
 
   # name each element with the day and assign the data frames
   names(sleep_data)[i] <- day
 
   # cut off  data after 9 hours (32400 seconds)
-  x <- x[x$timehz <= 32400, ]
-  y <- y[y$timehz <= 32400, ]
+  x <- x[x$secs <= 32400, ]
+  y <- y[y$secs <= 32400, ]
 
   # get rid of angles greater than 180 degrees or less than -180 degrees
   x <- x[x$angle >= -180 & x$angle <= 180, ]
   y <- y[y$angle >= -180 & y$angle <= 180, ]
 
   if (i == 5) {
-    # add two hours to the timehz of embletta
-    x$timehz <- x$timehz + 3600 * 2.5
-    # reverse the angle of itouch
+    # Shift secs of embletta by 2.5 hours for Nov23
+    #   Embletta data only had 6.5 hours of data, and shifting by +2.5 aligned
+    #   with SomnoPose data
+    x$secs <- x$secs + 3600 * 2.5
+    # reverse the angle of SomnoPose
     y$angle <- - y$angle
   } else if (i == 6) {
-    # add one hour to the timehz of embletta
-    x$timehz <- x$timehz + 3600 * 1.5
+    # Shift secs of embletta by +1.5 hours for Nov24
+    #   Embletta data only had 7.5 hours of data, and shifting by +1.5 aligned
+    #   with SomnoPose data
+    x$secs <- x$secs + 3600 * 1.5
     y$angle <- - y$angle
   }
 
-  sleep_data[[i]] <- list(Embletta = x, iTouch = y)
+  # Shift the SomnoPose angle with the mean difference to compare amplitudes
+  # diff <- mean(x$angle[which(x$secs %in% y$secs)] 
+  #            - y$angle[which(y$secs %in% x$secs)])
+  # y$angle <- y$angle + diff
+
+  sleep_data[[i]] <- list(Embletta = x, SomnoPose = y)
 }
 
 str(sleep_data)
-
-
 
 #'
 #' ## Challenge 2
@@ -168,50 +175,41 @@ str(sleep_data)
 #'
 
 
-# plot one only
-# --------------------------------
-day_num <- 6
-x <- sleep_data[[day_num]]$Embletta
-y <- sleep_data[[day_num]]$iTouch
+# plotting function for each day
+plot_day <- function(day_num) {
+  x <- sleep_data[[day_num]]$Embletta
+  y <- sleep_data[[day_num]]$SomnoPose
+  day <- as.Date(paste(names(sleep_data)[day_num], year), format = "%b%d %Y")
+  day <- format(day, "%B %d") # make day like November 17
 
-# Embletta
-plot(x$timehz, x$angle, type = "l", col = "blue",
-     xlab = "Time since 22:00 (s)", ylab = "Angle",
-     main = "Embletta vs iTouch")
-lines(y$timehz, y$angle, col = "red")  #  iTouch
-legend("topright", legend = c("Embletta", "iTouch"),
-       col = c("blue", "red"), lty = 1)
-# --------------------------------
+  # Embletta
+  plot(x$secs, x$angle, type = "l", col = "blue",
+       xlab = "Local Time", ylab = "Orientation (deg)",
+       xaxt = "n", yaxt = "n", main = day,
+       xlim = range(c(0, 32400)), ylim = range(c(-180, 180))) # Embletta
+  lines(y$secs, y$angle, col = "red")  #  SomnoPose
 
+  # dotted line at 0, light gray
+  abline(h = c(-180, -90, 0, 90, 180), lty = 2, col = "lightgray")
 
+  # Custom ticks for x axis showing time in HH:MM
+  ticks <- seq(0, 9 * 3600, by = 3600)  
+  labels <- format(as.POSIXct("22:00:00", format = "%H:%M:%S" ) + ticks, "%H:%M")
+  axis(1, at = ticks, labels = labels)
 
+  yticks <- seq(-180, 180, by = 45)
+  axis(2, at = yticks, labels = yticks, las = 1)
 
-# plot all together in one PNG file
-# --------------------------------
-png("sleep_plots.png", width = 3000, height = 1500, res = 400)
-par(mfrow = c(2, 3))
-
-for (day in names(sleep_data)[1:6]) {   # loop over the 6 days
-  x <- sleep_data[[day]]$Embletta
-  y <- sleep_data[[day]]$iTouch
-
-  print(day)
-
-  if (day == "Nov23") {
-    day = paste(day, "embletta +2.5 hours")
-  } else if (day == "Nov24") {
-    day = paste(day, "embletta +1.5 hours")
-  }
-  
-  # Embletta curve
-  plot(x$timehz, x$angle, type = "l", col = "blue",
-       xlab = "Hz time since 22:00",
-       ylab = "Angle",
-       main = day)
-  
-  # iTouch curve
-  lines(y$timehz, y$angle, col = "red")
+  legend("bottom", c("Embletta", "SomnoPose"), col = c("blue", "red"), 
+         lty = 1, inset=c(0,1), xpd=TRUE, horiz=TRUE, bty="n")
 }
-dev.off()
-# --------------------------------
+
+# save all plots as pdf in a subdirectory
+for (day_num in 1:6) {
+  day <- names(sleep_data)[day_num]
+  pdf(file = file.path("plots", paste0(day, ".pdf")), 
+    width = 8, height = 6)
+  plot_day(day_num)
+  dev.off()
+}
 

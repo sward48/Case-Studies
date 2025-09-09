@@ -109,14 +109,10 @@ for (i in 1:length(days)) {
     y$angle <- - y$angle
   }
 
-  # Shift the SomnoPose angle with the mean difference to compare amplitudes
-  # diff <- mean(x$angle[which(x$secs %in% y$secs)] 
-  #            - y$angle[which(y$secs %in% x$secs)])
-  # y$angle <- y$angle + diff
-
   sleep_data[[i]] <- list(Embletta = x, SomnoPose = y)
 }
 
+# Print structure of the 
 str(sleep_data)
 
 #'
@@ -176,25 +172,38 @@ str(sleep_data)
 
 
 # plotting function for each day
-plot_day <- function(day_num) {
+plot_day <- function(day_num, shift = FALSE) {
   x <- sleep_data[[day_num]]$Embletta
   y <- sleep_data[[day_num]]$SomnoPose
   day <- as.Date(paste(names(sleep_data)[day_num], year), format = "%b%d %Y")
   day <- format(day, "%B %d") # make day like November 17
+
+  # Fit a linear model to estimate the vertical shift using the intercept
+  mutual_secs <- intersect(x$secs, y$secs) # common time steps
+  lm.fit <- lm(y$angle[which(y$secs %in% mutual_secs)] ~ 
+   x$angle[which(x$secs %in% mutual_secs)])
+  diff <- lm.fit$coefficients[1] # intercept of linear fit
 
   # Embletta
   plot(x$secs, x$angle, type = "l", col = "blue",
        xlab = "Local Time", ylab = "Orientation (deg)",
        xaxt = "n", yaxt = "n", main = day,
        xlim = range(c(0, 32400)), ylim = range(c(-180, 180))) # Embletta
-  lines(y$secs, y$angle, col = "red")  #  SomnoPose
+  
+  if (shift) {
+    # SomnoPose with vertical shift
+    lines(y$secs, y$angle - diff, col = "red")  #  SomnoPose shifted
+  } else {
+    # SomnoPose without vertical shift
+    lines(y$secs, y$angle, col = "red")  #  SomnoPose as recorded
+  }
 
   # dotted line at 0, light gray
   abline(h = c(-180, -90, 0, 90, 180), lty = 2, col = "lightgray")
 
   # Custom ticks for x axis showing time in HH:MM
   ticks <- seq(0, 9 * 3600, by = 3600)  
-  labels <- format(as.POSIXct("22:00:00", format = "%H:%M:%S" ) + ticks, "%H:%M")
+  labels <- format(as.POSIXct("22:00:00", format = "%H:%M:%S" ) + ticks,"%H:%M")
   axis(1, at = ticks, labels = labels)
 
   yticks <- seq(-180, 180, by = 45)
@@ -204,11 +213,20 @@ plot_day <- function(day_num) {
          lty = 1, inset=c(0,1), xpd=TRUE, horiz=TRUE, bty="n")
 }
 
-# save all plots as pdf in a subdirectory
+# save original data plots as pdf in a subdirectory
 for (day_num in 1:6) {
   day <- names(sleep_data)[day_num]
   pdf(file = file.path("plots", paste0(day, ".pdf")), 
     width = 8, height = 6)
   plot_day(day_num)
+  dev.off()
+}
+
+# save shifted data plots 
+for (day_num in 1:6) {
+  day <- names(sleep_data)[day_num]
+  pdf(file = file.path("plots", paste0(day, "-shifted.pdf")), 
+    width = 8, height = 6)
+  plot_day(day_num, shift = TRUE)
   dev.off()
 }

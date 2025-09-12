@@ -1,0 +1,182 @@
+---
+title: "Hamden Appraised Value 'Fairness', Part 2: Data Acquisition"
+format: html
+---
+
+As some of you found, the state-wide data from 2024 is missing sale prices for Hamden for some reason. The state-wide data from 2023 that we used in class last spring does have sale prices for Hamden. I wrongly assumed the 2024 data would be fine since the 2023 data was fine. Rookie mistake!
+
+We could potentially use the 2023 data to do the analysis, but maybe we'd want more recent data. We can obtain this data directly from the Vision's website https://gis.vgsi.com/hamdenct/. On that website there is one webpage for every property. For example, here is the first Hamden property from the first row of the state-wide dataset (after filtering for `Town.Name == 'Hamden'` with property ID (PID) equal to 1: <https://gis.vgsi.com/hamdenct/Parcel.aspx?Pid=1>. Among other things, the HTML pages contain information appraised value (most recent, and a short history), sale date and price for recent transactions, and information about the property that we have seen previous (bedrooms, square footage of living area, etc). This info is unfortunately not in one nice neat table, but the information can be extracted and put into a data frame.
+
+[This .zip file](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/ERDOKwhS_s1Bn2f3GFAg5gABBrtaf-g-bAsOetpW44j7yA?e=QHhBRf) contains one HTML file for almost all of the properties in Hamden, so you don't have to spend the time to scrape them all. Extract the information you need to assess the "fairness" of the appraised values that were determined by Vision. To extract that information, you can likely use some combination of regular expressions and functions that read HTML tables like those summarized here: <https://bmacgtpm.github.io/notes/parsing-html-tables.html>.
+
+```{r}
+library(readxl)
+library(dplyr)
+library(janitor)
+```
+
+```{r}
+# # read the csv file
+# ct <- read.csv("Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv")
+
+# # filter the ct with Town_name = Hamden
+# ct <- ct %>% filter(Town_Name == "Hamden")
+
+# # save as rds
+# saveRDS(ct, file = "hamden.RDS") 
+```
+
+```{r}
+# read in the excel file
+sales_data <- read_excel("data/sales_data.xlsx")
+
+hamden <- readRDS("data/hamden.RDS")
+
+hamden <- hamden %>%
+              select(link,
+                     Town_Name, 
+                     Unit_Type,
+                     Location,
+                     Mailing.City,
+                     Assessed.Total,
+                     Assessed.Land,
+                     Assessed.Building,
+                     Appraised.Outbuilding,
+                     Valuation.Year,
+                     Land.Acres,
+                     State.Use,
+                     State.Use.Description,
+                     Condition,
+                     Living.Area,
+                     Effective.Area,
+                     Total.Rooms,
+                     Number.of.Bedroom,
+                     Number.of.Baths,
+                     Number.of.Half.Baths,
+                     Sale.Date,
+                     Prior.Sale.Price,
+                     Occupancy,
+                     Planning_Region,
+                     Collection_Year,
+                     FIPS.Code,
+                     ayb,
+                     eyb,
+                     Shape__Area,
+                     Shape__Length) %>% clean_names()
+```
+
+
+
+
+
+# Scraping of the HTML files
+Keep the html directory "Hamden_Sept2025" in the working directory.
+
+```{r}
+# read html file from Hamden_Sept2025
+library(rvest)
+
+# file from the zip file
+files <- list.files("Hamden_Sept2025", pattern = "*.html", full.names = TRUE)
+
+df <- data.frame() # to collect values from each html
+skips <- c() # to collect skipped file numbers
+
+# "Hamden_Sept2025/100045.html"
+
+for (file in files){
+    d1 <- read_html(file) 
+    d2 <- d1 %>% html_table()
+    html_lines <- strsplit(as.character(d1), "\n")[[1]]
+
+    if (length(d2) < 6) { # skip if no table
+        # append file number before .html to skips
+        skips <- c(skips, gsub(".*\\/|\\.html", "", file))
+        next
+    }
+
+    # get the line number with PID
+    line_PID <- grep("PID", lines)
+
+    # PID from the file, 3rd row after the line with PID
+    pid <- gsub("<.*?>", "", html_lines[line_PID+3]) %>% trimws()
+    pid <- as.numeric(pid) # make numeric
+
+    # 2024 assessed value
+    assessed_2024 <- d2[3]
+    assessed_2023 <- d2[length(d2)]  # 2023 is the last table
+
+    # Sale prices
+    sale_prices <- d2[[6]]
+
+    building_2023 <- as.numeric(gsub("[$,]", "", assessed_2023[[1]][2]))
+    extra_2023 <- as.numeric(gsub("[$,]", "", assessed_2023[[1]][3]))
+    outb_2023 <- as.numeric(gsub("[$,]", "", assessed_2023[[1]][4]))
+    land_2023 <- as.numeric(gsub("[$,]", "", assessed_2023[[1]][5]))
+    total_2023 <- as.numeric(gsub("[$,]", "", assessed_2023[[1]][6]))
+
+    building_2024 <- as.numeric(gsub("[$,]", "", assessed_2024[[1]][2]))
+    extra_2024 <- as.numeric(gsub("[$,]", "", assessed_2024[[1]][3]))
+    outb_2024 <- as.numeric(gsub("[$,]", "", assessed_2024[[1]][4]))
+    land_2024 <- as.numeric(gsub("[$,]", "", assessed_2024[[1]][5]))
+    total_2024 <- as.numeric(gsub("[$,]", "", assessed_2024[[1]][6]))
+
+    sale_df <- as.data.frame(sale_prices)
+    sale_df["Sale Price"] <- as.numeric(gsub("[$,]", "", sale_df[,"Sale Price"]))
+    sale_df["Sale Date"] <- as.Date(sale_df[,"Sale Date"], format = "%m/%d/%Y")
+
+    # select the most recent sale above 1000
+    if (nrow(sale_df) > 1 & any(sale_df$`Sale Price` > 1000)){
+        sale_df <- sale_df %>% 
+            filter(`Sale Price` > 1000) %>% 
+            arrange(desc(`Sale Date`))
+    }
+    sale_price <- sale_df[1, "Sale Price"]
+    sale_date <- sale_df[1, "Sale Date"]
+
+    # add to the data frame
+    property <- data.frame(
+        pid = pid,
+        sale_price = sale_price,
+        sale_date = sale_date,
+        total_2024 = total_2024,
+        total_2023 = total_2023,
+        building_2024 = building_2024,
+        building_2023 = building_2023,
+        extra_2024 = extra_2024,
+        extra_2023 = extra_2023,
+        outb_2024 = outb_2024,
+        outb_2023 = outb_2023,
+        land_2024 = land_2024,
+        land_2023 = land_2023
+    )
+
+    df <- rbind(df, property)
+
+    if (nrow(df) %% 1000 == 0){
+        cat(nrow(df), " ")
+    }
+}
+if (length(skips) > 0){
+    print(paste("Skipped a total of", length(skips), "files"))
+} else {
+    print("No files were skipped")
+}
+
+```
+
+```{r}
+# order df by pid
+df <- df %>% arrange(pid)
+
+# save to csv file
+write.csv(df, "sales_scraped.csv", row.names = FALSE)
+```
+
+
+```{r}
+# plot the histogram of sale prices
+years <- as.numeric(format(df$sale_date, "%Y"))
+
+hist(years[years >= 2000], main = "Sale Years", xlab = "Year", breaks = 20)
+```

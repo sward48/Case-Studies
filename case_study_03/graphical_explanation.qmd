@@ -1,0 +1,191 @@
+```{r}
+#read in the data and what not
+library(janitor)
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+library(scales)
+
+sales_df <- read.csv("sales_scraped.csv", check.names = TRUE, stringsAsFactors = FALSE)
+property_df <- readRDS("hamden_property.rds")
+
+sales_df    <- clean_names(sales_df)
+property_df <- clean_names(property_df)
+```
+
+```{r}
+property_keep <- c(
+  "pid", "link", 
+  "land_acres", "living_area", "effective_area", "total_rooms", "number_of_bedroom",
+  "number_of_baths", "number_of_half_baths", "occupancy", "ayb", "eyb",
+  "shape_area", "shape_length"
+)
+property_df <- property_df %>%
+  mutate(pid = as.integer(str_extract(link, "(?<=^35650-)\\d+")))  %>%
+  select(any_of(c(property_keep, "pid"))) %>% 
+  filter(!is.na(pid))
+# merge on pid (keep all properties; bring in sales/appraisal cols)
+merged_df <- property_df %>% left_join(sales_df, by = "pid")
+str(merged_df)
+```
+
+```{r}
+df <- merged_df %>%
+  mutate(
+    sale_date = ymd(sale_date),
+    sale_year = year(sale_date),
+
+    # choose the assessment snapshot closest to the sale date
+    assessed_total = case_when(
+      !is.na(total_2024) & sale_year >= 2024 ~ total_2024,
+      !is.na(total_2023) & sale_year <= 2023 ~ total_2023,
+      TRUE ~ coalesce(total_2024, total_2023)
+    ),
+
+    # core ratios
+    ratio_assess = assessed_total / sale_price,    # target ~0.70 in CT
+    ratio_equal  = (assessed_total / 0.70) / sale_price  # target ~1.00
+  )
+
+# keep plausible, recent sales
+recent <- df %>%
+  filter(
+    !is.na(sale_price), sale_price > 10000, sale_price < 10000000, 
+    occupancy == 1,
+    sale_date >= as.Date("2023-01-01"), 
+    !is.na(assessed_total)
+  ) %>%
+  # trim extreme outliers in ratio to stabilize metrics
+  filter(between(ratio_assess, 0.2, 2))
+
+nrow(recent)
+summary(select(recent, sale_price, assessed_total, ratio_assess, ratio_equal))
+```
+
+```{r}
+#read in centroid data and merge with the big data frame
+centroid <- readRDS("centroids.no.geometry.rds")
+
+centroid <- centroid %>% 
+    clean_names() %>%
+    filter(town_name == 'HAMDEN')
+
+recent <- recent %>% left_join(centroid, by='link')
+```
+
+
+```{r}
+#make a leaflet with the hamden properties and color by assessed ratio
+library(readr)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(scales)
+library(leaflet)
+library(htmltools)
+library(viridisLite)
+
+
+df <- recent
+
+coord_candidates <- list(
+  c("point_x",  "point_y"),
+  c("point_x.x","point_y.x"),
+  c("point_x.y","point_y.y")
+)
+xy <- NULL
+for (pair in coord_candidates) {
+  if (all(pair %in% names(df))) { xy <- pair; break }
+}
+stopifnot(!is.null(xy))  # stop if no coordinate columns found
+
+df <- df %>%
+  mutate(
+    lon = suppressWarnings(as.numeric(.data[[xy[1]]])),
+    lat = suppressWarnings(as.numeric(.data[[xy[2]]]))
+  )
+
+# ---- assessed columns like total_2023, total_2024 ----
+assessed_cols  <- grep("^total_\\d{4}$", names(df), value = TRUE)
+assessed_years <- sort(as.integer(str_extract(assessed_cols, "\\d{4}")))
+if (length(assessed_years) == 0) stop("No assessed value columns matching total_YYYY found.")
+
+# ---- compute assessed value for the nearest available year & ratio ----
+df_map <- df %>%
+  mutate(
+    sale_date = as.Date(sale_date),
+    sale_year = lubridate::year(sale_date),
+    chosen_year = ifelse(
+      is.na(sale_year), NA_integer_,
+      pmax(min(assessed_years), pmin(sale_year, max(assessed_years)))
+    )
+  ) %>%
+  rowwise() %>%
+  mutate(
+    assessed_value = if (!is.na(chosen_year))
+      cur_data()[[paste0("total_", chosen_year)]]
+    else NA_real_
+  ) %>%
+  ungroup() %>%
+  mutate(ratio = assessed_value / sale_price) %>%
+  filter(ratio < 2) %>%
+  mutate(ratio_cat = case_when(ratio <= 0.7 ~ 'low',
+                          ratio > 0.7 ~ 'high')) %>%
+  filter(
+    sale_price > 0,
+    is.finite(ratio),
+    !is.na(lat), !is.na(lon)
+  )
+
+if (nrow(df_map) == 0) stop("No rows to plot: check sale_price > 0 and assessed/coordinate fields.")
+
+# ---- labels (hover/popup) ----
+df_map <- df_map %>%
+  mutate(
+    hover_label = paste0(
+      "<b>", ifelse(!is.na(location), location, "(unknown address)"), "</b>",
+      "<br>Town: ", dplyr::coalesce(town_name, "—"),
+      "<br>Sale: ", scales::dollar(sale_price), " on ", as.character(sale_date),
+      "<br>Assessed (", chosen_year, "): ", scales::dollar(assessed_value),
+      "<br><b>Ratio (Assessed/Sale): </b>", round(ratio, 2)
+    )
+  )
+
+# ---- color palette ----
+pal <- colorFactor(
+  palette = c('blue', 'red'),
+  domain  = df_map$ratio_cat,
+  na.color = "#cccccc"
+)
+
+# ---- leaflet map ----
+leaf <- leaflet(df_map, options = leafletOptions(preferCanvas = TRUE)) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addCircleMarkers(
+    lng = ~lon, lat = ~lat,
+    radius = 5,
+    stroke = FALSE, fillOpacity = 0.5,
+    fillColor = ~pal(ratio_cat),
+    label = ~lapply(hover_label, HTML),   # hover
+    popup = ~lapply(hover_label, HTML)    # click
+    # clusterOptions = markerClusterOptions()  # <- enable if you want clustering
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    colors = c('blue', 'red'),
+    labels = c('low', 'high'),
+    values = ~ratio,
+    title = "Assessed / Sale",
+    labFormat = labelFormat(digits = 2),
+    opacity = 1
+  )
+
+# ---- fit to bounds (no sf needed) ----
+xr <- range(df_map$lon, na.rm = TRUE)
+yr <- range(df_map$lat, na.rm = TRUE)
+leaf <- leaf %>% fitBounds(lng1 = xr[1], lat1 = yr[1], lng2 = xr[2], lat2 = yr[2])
+
+leaf
+```
+

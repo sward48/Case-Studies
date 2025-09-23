@@ -154,13 +154,16 @@ df_map <- df_map %>%
 
 # ---- color palette ----
 pal <- colorFactor(
-  palette = c('blue', 'red'),
+  palette = c('red', 'blue'),
   domain  = df_map$ratio_cat,
   na.color = "#cccccc"
 )
 
-# ---- leaflet map ----
-leaf <- leaflet(df_map, options = leafletOptions(preferCanvas = TRUE)) %>%
+#2024 map
+df_map2024 <- df_map %>%
+    filter(sale_year == 2024)
+
+leaf <- leaflet(df_map2024, options = leafletOptions(preferCanvas = TRUE)) %>%
   addProviderTiles(providers$CartoDB.Positron) %>%
   addCircleMarkers(
     lng = ~lon, lat = ~lat,
@@ -182,10 +185,45 @@ leaf <- leaflet(df_map, options = leafletOptions(preferCanvas = TRUE)) %>%
   )
 
 # ---- fit to bounds (no sf needed) ----
-xr <- range(df_map$lon, na.rm = TRUE)
-yr <- range(df_map$lat, na.rm = TRUE)
+xr <- range(df_map2024$lon, na.rm = TRUE)
+yr <- range(df_map2024$lat, na.rm = TRUE)
 leaf <- leaf %>% fitBounds(lng1 = xr[1], lat1 = yr[1], lng2 = xr[2], lat2 = yr[2])
 
 leaf
+#htmlwidgets::saveWidget(leaf, "hamden2024.html", selfcontained = TRUE)
 ```
 
+```{r}
+#2023 map
+df_map2023 <- df_map %>%
+    filter(sale_year == 2023)
+
+leaf <- leaflet(df_map2023, options = leafletOptions(preferCanvas = TRUE)) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addCircleMarkers(
+    lng = ~lon, lat = ~lat,
+    radius = 5,
+    stroke = FALSE, fillOpacity = 0.5,
+    fillColor = ~pal(ratio_cat),
+    label = ~lapply(hover_label, HTML),   # hover
+    popup = ~lapply(hover_label, HTML)    # click
+    # clusterOptions = markerClusterOptions()  # <- enable if you want clustering
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    colors = c('red', 'blue'),
+    labels = c('high', 'low'),
+    values = ~ratio,
+    title = "Assessed / Sale",
+    labFormat = labelFormat(digits = 2),
+    opacity = 1
+  )
+
+# ---- fit to bounds (no sf needed) ----
+xr <- range(df_map2023$lon, na.rm = TRUE)
+yr <- range(df_map2023$lat, na.rm = TRUE)
+leaf <- leaf %>% fitBounds(lng1 = xr[1], lat1 = yr[1], lng2 = xr[2], lat2 = yr[2])
+
+leaf
+htmlwidgets::saveWidget(leaf, "hamden2023.html", selfcontained = TRUE)
+```

@@ -90,15 +90,14 @@ library(viridisLite)
 df <- recent
 
 coord_candidates <- list(
-  c("point_x",  "point_y"),
-  c("point_x.x","point_y.x"),
-  c("point_x.y","point_y.y")
+  c("point_x",  "point_y")
 )
 xy <- NULL
 for (pair in coord_candidates) {
   if (all(pair %in% names(df))) { xy <- pair; break }
 }
-stopifnot(!is.null(xy))  # stop if no coordinate columns found
+#stops code is no coords (this is probs not needed but i had some data problems)
+stopifnot(!is.null(xy))
 
 df <- df %>%
   mutate(
@@ -106,12 +105,12 @@ df <- df %>%
     lat = suppressWarnings(as.numeric(.data[[xy[2]]]))
   )
 
-# ---- assessed columns like total_2023, total_2024 ----
+#get the assessed columns
 assessed_cols  <- grep("^total_\\d{4}$", names(df), value = TRUE)
 assessed_years <- sort(as.integer(str_extract(assessed_cols, "\\d{4}")))
 if (length(assessed_years) == 0) stop("No assessed value columns matching total_YYYY found.")
 
-# ---- compute assessed value for the nearest available year & ratio ----
+#get the ratio value and make into categories
 df_map <- df %>%
   mutate(
     sale_date = as.Date(sale_date),
@@ -130,8 +129,9 @@ df_map <- df %>%
   ungroup() %>%
   mutate(ratio = assessed_value / sale_price) %>%
   filter(ratio < 2) %>%
-  mutate(ratio_cat = case_when(ratio <= 0.7 ~ 'low',
-                          ratio > 0.7 ~ 'high')) %>%
+  mutate(ratio_cat = case_when(ratio < 0.6 ~ 'low',
+                            ratio >= 0.6 & ratio <= 0.8 ~ 'fair',
+                          ratio > 0.8 ~ 'high')) %>%
   filter(
     sale_price > 0,
     is.finite(ratio),
@@ -140,7 +140,7 @@ df_map <- df %>%
 
 if (nrow(df_map) == 0) stop("No rows to plot: check sale_price > 0 and assessed/coordinate fields.")
 
-# ---- labels (hover/popup) ----
+#create the labels
 df_map <- df_map %>%
   mutate(
     hover_label = paste0(
@@ -152,9 +152,9 @@ df_map <- df_map %>%
     )
   )
 
-# ---- color palette ----
+#create the color palette
 pal <- colorFactor(
-  palette = c('red', 'blue'),
+  palette = c('black', 'red', 'blue'),
   domain  = df_map$ratio_cat,
   na.color = "#cccccc"
 )
@@ -170,24 +170,18 @@ leaf <- leaflet(df_map2024, options = leafletOptions(preferCanvas = TRUE)) %>%
     radius = 5,
     stroke = FALSE, fillOpacity = 0.5,
     fillColor = ~pal(ratio_cat),
-    label = ~lapply(hover_label, HTML),   # hover
-    popup = ~lapply(hover_label, HTML)    # click
-    # clusterOptions = markerClusterOptions()  # <- enable if you want clustering
+    label = ~lapply(hover_label, HTML)
   ) %>%
   addLegend(
     position = "bottomright",
-    colors = c('blue', 'red'),
-    labels = c('low', 'high'),
+    colors = c('blue', 'black', 'red'),
+    labels = c('low', 'fair', 'high'),
     values = ~ratio,
     title = "Assessed / Sale",
     labFormat = labelFormat(digits = 2),
     opacity = 1
   )
 
-# ---- fit to bounds (no sf needed) ----
-xr <- range(df_map2024$lon, na.rm = TRUE)
-yr <- range(df_map2024$lat, na.rm = TRUE)
-leaf <- leaf %>% fitBounds(lng1 = xr[1], lat1 = yr[1], lng2 = xr[2], lat2 = yr[2])
 
 leaf
 #htmlwidgets::saveWidget(leaf, "hamden2024.html", selfcontained = TRUE)
@@ -205,25 +199,18 @@ leaf <- leaflet(df_map2023, options = leafletOptions(preferCanvas = TRUE)) %>%
     radius = 5,
     stroke = FALSE, fillOpacity = 0.5,
     fillColor = ~pal(ratio_cat),
-    label = ~lapply(hover_label, HTML),   # hover
-    popup = ~lapply(hover_label, HTML)    # click
-    # clusterOptions = markerClusterOptions()  # <- enable if you want clustering
+    label = ~lapply(hover_label, HTML)
   ) %>%
   addLegend(
     position = "bottomright",
-    colors = c('red', 'blue'),
-    labels = c('high', 'low'),
+    colors = c('red', 'black', 'blue'),
+    labels = c('high', 'fair', 'low'),
     values = ~ratio,
     title = "Assessed / Sale",
     labFormat = labelFormat(digits = 2),
     opacity = 1
   )
 
-# ---- fit to bounds (no sf needed) ----
-xr <- range(df_map2023$lon, na.rm = TRUE)
-yr <- range(df_map2023$lat, na.rm = TRUE)
-leaf <- leaf %>% fitBounds(lng1 = xr[1], lat1 = yr[1], lng2 = xr[2], lat2 = yr[2])
-
 leaf
-htmlwidgets::saveWidget(leaf, "hamden2023.html", selfcontained = TRUE)
+#htmlwidgets::saveWidget(leaf, "hamden2023.html", selfcontained = TRUE)
 ```

@@ -27,9 +27,7 @@ We could potentially use the 2023 data to do the analysis, but maybe we'd want m
 
 # Data sources
 
-Folder rawdata: 
-* `centroids.no.geometry.rds`: centroids of properties in CT (from Brian) 
-* `Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv`: property data for CT from the [link](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/EVAE5NykXsdLlqI4ufT6nBwBA0_oJh1jqjPioEMQ_G7Fmg?e=qoYauD) provided by Brian: 
+Folder rawdata: \* `centroids.no.geometry.rds`: centroids of properties in CT (from Brian) \* `Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv`: property data for CT from the [link](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/EVAE5NykXsdLlqI4ufT6nBwBA0_oJh1jqjPioEMQ_G7Fmg?e=qoYauD) provided by Brian:
 
 Folder data: - `sales_scraped.csv`: sales data scraped from the HTML files
 
@@ -278,8 +276,20 @@ t.test(sold_2024$ratio, mu = 0.70)
 wilcox.test(sold_2023_2024$ratio - 0.70, conf.int = TRUE)
 ```
 
-GLM and LM, engineering features - month by month, does the sale price vary through the year? predict the sale price form features - debias months or season - mds: multidimensional scaling - r package https://cran.r-project.org/web/packages/gpairs/index.html - distance between points, reconstruct a map that preserves distances - to recover the map of the properties - clustering algorithms and regression on the clusters (k-means etc)
+**GLM and LM** engineering features month by month, does the sale price vary through the year?
 
-spatial: - debias number of bedrooms or bathrooms? to get a cleaner look of location - continuous color bar - debias for bedrooms
+predict the sale price form features debias months or season
 
-weekenesses, from residuals etc, leads to more - rolling average more informative - rolling average for 2023 and 2024, simplest nl model - geom.smooth could be used, smooth rolling average
+try mds: multidimensional scaling
+
+r package https://cran.r-project.org/web/packages/gpairs/index.html
+
+distance between points, reconstruct a map that preserves distances, to recover the map of the properties
+
+clustering algorithms and regression on the clusters (k-means etc)
+
+**spatial**: debias number of bedrooms or bathrooms? to get a cleaner look of location, try continuous color bar. Could debias for bedrooms
+
+**weekenesses, from residuals etc, leads to more** Try rolling average more informative, do rolling average for 2023 and 2024, its the simplest nl model
+
+geom.smooth could be used, smooth rolling average

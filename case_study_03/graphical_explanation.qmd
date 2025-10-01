@@ -7,8 +7,8 @@ library(lubridate)
 library(ggplot2)
 library(scales)
 
-sales_df <- read.csv("sales_scraped.csv", check.names = TRUE, stringsAsFactors = FALSE)
-property_df <- readRDS("hamden_property.rds")
+sales_df <- read.csv("data/sales_scraped.csv", check.names = TRUE, stringsAsFactors = FALSE)
+property_df <- readRDS("data/hamden.RDS")
 
 sales_df    <- clean_names(sales_df)
 property_df <- clean_names(property_df)
@@ -65,7 +65,7 @@ summary(select(recent, sale_price, assessed_total, ratio_assess, ratio_equal))
 
 ```{r}
 #read in centroid data and merge with the big data frame
-centroid <- readRDS("centroids.no.geometry.rds")
+centroid <- readRDS("rawdata/centroids.no.geometry.rds")
 
 centroid <- centroid %>% 
     clean_names() %>%

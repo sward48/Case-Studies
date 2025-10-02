@@ -140,7 +140,7 @@ legend("topright", legend = c("0.7 line", "Median"), col = c("red", "blue"), lty
 box(col = "black")
 
 # save as pdf
-dev.copy2pdf(file = "figures/ratio_2023_2024.pdf", width = 7, height = 5)
+dev.copy2pdf(file = "figures/ratio_2009_23_24.pdf", width = 7, height = 5)
 ```
 
 To compare the distributions of the assessment ratio for 2023 and 2024, the densities are compared below.

@@ -27,11 +27,10 @@ We could potentially use the 2023 data to do the analysis, but maybe we'd want m
 
 # Data sources
 
-Folder rawdata: \* `centroids.no.geometry.rds`: centroids of properties in CT (from Brian) \* `Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv`: property data for CT from the [link](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/EVAE5NykXsdLlqI4ufT6nBwBA0_oJh1jqjPioEMQ_G7Fmg?e=qoYauD) provided by Brian:
+Folder rawdata: \* `centroids.no.geometry.rds`: centroids of properties in CT (from Brian) \* `Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv`: property data for CT from the [link](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/EVAE5NykXsdLlqI4ufT6nBwBA0_oJh1jqjPioEMQ_G7Fmg?e=qoYauD) provided by Brian
+\* Hamden_Sept2025: - Downloaded from the provided zip file: [This .zip file](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/ERDOKwhS_s1Bn2f3GFAg5gABBrtaf-g-bAsOetpW44j7yA?e=QHhBRf)
 
 Folder data: - `sales_scraped.csv`: sales data scraped from the HTML files
-
-Folder Hamden_Sept2025: - Downloaded from the provided zip file: [This .zip file](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/ERDOKwhS_s1Bn2f3GFAg5gABBrtaf-g-bAsOetpW44j7yA?e=QHhBRf)
 
 ```{r}
 # make a figures directory if it doesn't exist
@@ -81,16 +80,26 @@ hamden <- hamden %>%
 merged <- hamden %>% 
     left_join(sales, by = "pid") # %>% left_join(geo, by = "pid") 
 
+data_2009 <- read.csv("rawdata/Hamden2009.csv") %>%
+  left_join(sales[, c("pid", "sale_price_2009", "sale_date_2009")], by = "pid") %>%
+  rename(sale_price = sale_price_2009, sale_date = sale_date_2009)
+
 
 # sanity check: compare assessed value in the property dataset and the scraped sales dataset
 # head(merged[, c("pre_yr_assessed_total", "assessed_total", "total_2024", "total_2023")],10)
 ```
+
 
 Filter the data to sales in 2023 and 2024, and filtering outliers with assessment ratio \> 2
 
 ```{r}
 # Remove rows with sale_price=0 
 merged <- merged[merged["sale_price"] != 0, ]
+
+sold_2009 <- data_2009 %>%
+  filter(!is.na(sale_price)) %>%
+  mutate(ratio = assessedvalue / sale_price) %>%
+  filter(ratio < 5) # remove outliers with ratio > 2
 
 sold_2023 <- merged %>% 
     filter(!is.na(sale_price), 
@@ -108,13 +117,21 @@ sold_2024 <- merged %>%
     #filter(ratio < 2) # remove outliers with ratio > 2
 ```
 
+
 Combine 2023 and 2024 data to plot histogram of the assessment ratio (for both years)
 
 ```{r}
 sold_2023_2024 <- rbind(sold_2023, sold_2024)
 
+# Dataframe for all years
+sold_2009_23_24 <- rbind(
+  data.frame(year = 2009, ratio = sold_2009$ratio),
+  data.frame(year = 2023, ratio = sold_2023$ratio),
+  data.frame(year = 2024, ratio = sold_2024$ratio)
+)
+
 # sales in 2023 and 2024
-hist(sold_2023_2024$ratio, breaks = 50, xlim = c(0, 2),
+hist(sold_2009_23_24$ratio, breaks = 50, xlim = c(0, 2),
      xlab = "Assessed Value / Sale Price", main="",
      border = "grey", )
 abline(v = 0.7, col = "red", lty = 1)
@@ -123,36 +140,38 @@ legend("topright", legend = c("0.7 line", "Median"), col = c("red", "blue"), lty
 box(col = "black")
 
 # save as pdf
-dev.copy2pdf(file = "figures/ratio_2023_2024.pdf", width = 7, height = 5)
+dev.copy2pdf(file = "figures/ratio_2009_23_24.pdf", width = 7, height = 5)
 ```
 
 To compare the distributions of the assessment ratio for 2023 and 2024, the densities are compared below.
 
 ```{r}
 # Density plots for 2023 and 2024 
-plot(density(sold_2023$ratio, na.rm = TRUE), col = "blue", lwd = 2,
+plot(density(sold_2009$ratio, na.rm = TRUE), col = "green", lwd = 2,
      xlim = c(0, 2), ylim = c(0, 6),
      xlab = "Assessed Value / Sale Price", ylab = "Density",
      main = "")
+lines(density(sold_2023$ratio, na.rm = TRUE), col = "blue", lwd = 2)
 lines(density(sold_2024$ratio, na.rm = TRUE), col = "red", lwd = 2)
-abline(v = 0.7, col = "black", lty = 2, lwd = 1.5)
+abline(v = 0.7, col = "black", lty = 2, lwd = 2)
+abline(v = median(sold_2009$ratio, na.rm = TRUE), col = "green", lty = 3, lwd = 1.5)
 abline(v = median(sold_2023$ratio, na.rm = TRUE), col = "blue", lty = 3, lwd = 1.5)
 abline(v = median(sold_2024$ratio, na.rm = TRUE), col = "red", lty = 3, lwd = 1.5)
-legend("topright", legend = c("2023", "2024", "0.7 line"), 
-       col = c("blue", "red", "black"), lty = c(1, 1, 2), lwd = c(2, 2, 1.5))
+legend("topright", legend = c("2009", "2023", "2024", "0.7 line"), 
+       col = c("green","blue", "red", "black"), lty = c(1, 1, 1, 2), lwd = c(2, 2, 2, 2))
 
 # save as pdf
-dev.copy2pdf(file = "figures/density_2023_2024.pdf", width = 7, height = 5)
+dev.copy2pdf(file = "figures/density_2009_23_24.pdf", width = 7, height = 5)
 ```
 
 And associated table with the figures above
 
 ```{r}
 # Summary table with mean, median, sd of ratio for 2023 and 2024
-year_table <- data.frame(Year = c(2023, 2024, "Overall"),
-      Mean = c(mean(sold_2023$ratio, na.rm = TRUE), mean(sold_2024$ratio, na.rm = TRUE), mean(sold_2023_2024$ratio, na.rm = TRUE)),
-      Median = c(median(sold_2023$ratio, na.rm = TRUE), median(sold_2024$ratio, na.rm = TRUE), median(sold_2023_2024$ratio, na.rm = TRUE)),
-      SD = c(sd(sold_2023$ratio, na.rm = TRUE), sd(sold_2024$ratio, na.rm = TRUE), sd(sold_2023_2024$ratio, na.rm = TRUE))
+year_table <- data.frame(Year = c(2009, 2023, 2024, "2023-24"),
+      Mean = c(mean(sold_2009$ratio, na.rm = TRUE), mean(sold_2023$ratio, na.rm = TRUE), mean(sold_2024$ratio, na.rm = TRUE), mean(sold_2023_2024$ratio, na.rm = TRUE)),
+      Median = c(median(sold_2009$ratio, na.rm = TRUE), median(sold_2023$ratio, na.rm = TRUE), median(sold_2024$ratio, na.rm = TRUE), median(sold_2023_2024$ratio, na.rm = TRUE)),
+      SD = c(sd(sold_2009$ratio, na.rm = TRUE), sd(sold_2023$ratio, na.rm = TRUE), sd(sold_2024$ratio, na.rm = TRUE), sd(sold_2023_2024$ratio, na.rm = TRUE))
 )
 
 # print table and round to 3 decimal places

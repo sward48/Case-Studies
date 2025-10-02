@@ -79,3 +79,34 @@ model <- lm(log(assessed_total) ~ year_factor*bath_factor +
     year_factor*bed_factor + living_area + land_acres, data = df)
 summary(model)
 ```
+
+```{r}
+#make a mixed effects model using the factor variables
+library(lme4)
+library(arm)
+
+model <- lmer(log(assessed_total) ~ (year_factor | bath_factor) + 
+    (year_factor | bed_factor) + living_area + land_acres, data = df)
+summary(model)
+
+re <- ranef(model, condVar = TRUE)
+slope_bath <- re$bath_factor
+slope_bath$bath_factor <- rownames(slope_bath)
+slope_bath <- slope_bath %>%
+    clean_names() %>%
+    rename(slope = year_factor2024)
+se <- se.ranef(model)
+se_bath <- se$bath_factor
+#se_bath$bath_factor <- rownames(se_bath)
+se_bath <- se_bath %>%
+    clean_names() %>%
+    rename(se_intercept = intercept) %>%
+    rename(se_slope = year_factor2024)
+
+
+ggplot(slope_bath, aes(x = bath_factor, y = year_factor2024)) +
+  geom_point() +
+  labs(x = "# of Baths",
+       y = "Slope",
+       title = "Slope of Baths for Mixed Effects Model")
+```

@@ -7,12 +7,19 @@ library(lubridate)
 library(ggplot2)
 library(scales)
 
+# other libraries needed (for the leaflet plot)
+library(readr)
+library(leaflet)
+library(htmltools)
+library(viridisLite)
+
 sales_df <- read.csv("data/sales_scraped.csv", check.names = TRUE, stringsAsFactors = FALSE)
 property_df <- readRDS("data/hamden.RDS")
 
 sales_df    <- clean_names(sales_df)
 property_df <- clean_names(property_df)
 ```
+
 
 ```{r}
 property_keep <- c(
@@ -77,16 +84,6 @@ recent <- recent %>% left_join(centroid, by='link')
 
 ```{r}
 #make a leaflet with the hamden properties and color by assessed ratio
-library(readr)
-library(dplyr)
-library(lubridate)
-library(stringr)
-library(scales)
-library(leaflet)
-library(htmltools)
-library(viridisLite)
-
-
 df <- recent
 
 coord_candidates <- list(
@@ -185,7 +182,7 @@ leaf <- leaflet(df_map2024, options = leafletOptions(preferCanvas = TRUE)) %>%
 
 leaf
 htmlwidgets::saveWidget(leaf, "figures/hamden2024.html", selfcontained = TRUE)
-mapshot(leaf file = paste0(getwd(), "figures/hamden2024.png")
+#mapshot(leaf, file = paste0(getwd(), "figures/hamden2024.png"))
 #dev.copy2pdf(file = "figures/2024_spatial.pdf", width = 7, height = 5)
 ```
 
@@ -215,6 +212,6 @@ leaf <- leaflet(df_map2023, options = leafletOptions(preferCanvas = TRUE)) %>%
 
 leaf
 htmlwidgets::saveWidget(leaf, "figures/hamden2023.html", selfcontained = TRUE)
-mapshot(leaf file = paste0(getwd(), "figures/hamden2023.png")
+#mapshot(leaf, file = paste0(getwd(), "figures/hamden2023.png"))
 #dev.copy2pdf(file = "figures/2023_spatial.pdf", width = 7, height = 5)
 ```

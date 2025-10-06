@@ -49,6 +49,8 @@ library(purrr)
 library(forcats)
 library(scales)
 
+library(plotrix) # for plotCI (plot confidence intervals)
+
 ```
 
 # Preliminary analysis of the data
@@ -83,12 +85,9 @@ data_2009 <- read.csv("rawdata/Hamden2009.csv") %>%
   left_join(sales[, c("pid", "sale_price_2009", "sale_date_2009")], by = "pid") %>%
   rename(sale_price = sale_price_2009, sale_date = sale_date_2009)
 
-
-# sanity check: compare assessed value in the property dataset and the scraped sales dataset
-# head(merged[, c("pre_yr_assessed_total", "assessed_total", "total_2024", "total_2023")],10)
 ```
 
-Filter the data to sales in 2023 and 2024, and filtering outliers with assessment ratio \> 2
+Filter the data to sales in 2023 and 2024, and filtering outliers with assessment ratio greater than 5
 
 ```{r}
 # Remove rows with sale_price=0 
@@ -97,22 +96,22 @@ merged <- merged[merged["sale_price"] != 0, ]
 sold_2009 <- data_2009 %>%
   filter(!is.na(sale_price)) %>%
   mutate(ratio = assessedvalue / sale_price) %>%
-  filter(ratio < 5) # remove outliers with ratio > 2
+  filter(ratio < 5) # remove outliers with ratio > 5
 
 sold_2023 <- merged %>% 
     filter(!is.na(sale_price), 
            !is.na(total_2023),
            !is.na(sale_date),
            as.numeric(format(as.Date(sale_date), "%Y")) == 2023) %>%
-    mutate(ratio = total_2023 / sale_price) #%>%
-    #filter(ratio < 2) # remove outliers with ratio > 2
+    mutate(ratio = total_2023 / sale_price) %>%
+    filter(ratio < 5) # remove outliers with ratio > 5
 sold_2024 <- merged %>% 
     filter(!is.na(sale_price), 
            !is.na(total_2024),
            !is.na(sale_date),
            as.numeric(format(as.Date(sale_date), "%Y")) == 2024) %>%
-    mutate(ratio = total_2024 / sale_price) #%>%
-    #filter(ratio < 2) # remove outliers with ratio > 2
+    mutate(ratio = total_2024 / sale_price) %>%
+    filter(ratio < 5) # remove outliers with ratio > 5
 ```
 
 Combine 2023 and 2024 data to plot histogram of the assessment ratio (for both years)
@@ -464,13 +463,16 @@ dev.copy2pdf(file = "figures/living_area_loglog.pdf", width = 7, height = 5)
 
 ```
 
+And let's look at the relationship between the assessed-sale ratio and the
+sale price
+
 ```{r}
 lm_sales23 <- lm(log(ratio) ~ log(sale_price), data = sold_2023)
 lm_sales24 <- lm(log(ratio) ~ log(sale_price), data = sold_2024)
 
 # Plot points and regression lines for 2023
 plot(log(sold_2023$sale_price), log(sold_2023$ratio), 
-     xlab = "Sale Price (log $)", ylab = "Assessed/Sale Price (log)",
+     xlab = "Sale Price (log $)", ylab = "Assessed / Sale Price (log)",
      pch = 19, col = alpha(rgb(0, 0, 1, 0.3),0.2), cex=0.6)
 abline(lm_sales23, col = "blue", lwd = 2)
 
@@ -485,30 +487,48 @@ dev.copy2pdf(file = "figures/sale_price_loglog.pdf", width = 7, height = 5)
 ```
 
 # Hypothesis tests
+Here we perform hypothesis test to check wether the median ratio is 
+significantly different from 0.7
 
 ```{r}
-# fit a t-test (the data is approximately normal for 2023 and 2024 but not for the combined data) for each year separately
-t.test(sold_2023$ratio, mu = 0.70)
-t.test(sold_2024$ratio, mu = 0.70)
+# Let's first check if the normality assumption for t-test is satisfied
+par(mfrow = c(1, 3))
+qqnorm(sold_2009$ratio, main = "2009")
+qqline(sold_2009$ratio, col = "red")
+qqnorm(sold_2023$ratio, main = "2023")
+qqline(sold_2023$ratio, col = "red")
+qqnorm(sold_2024$ratio, main = "2024")
+qqline(sold_2024$ratio, col = "red")
 
-# Wilcoxon signed rank test (non-parametric), for the combined data since the distribution is not normal
-wilcox.test(sold_2023_2024$ratio - 0.70, conf.int = TRUE)
+dev.copy2pdf(file = "figures/qqplots.pdf", width = 10, height = 3.5)
+
+par(mfrow = c(1,1)) # restore the 1 plot layout
 ```
 
-**GLM and LM** engineering features month by month, does the sale price vary through the year?
+```{r}
+# Since the three distributions are not normal, we do a nonparametric test 
+# testing wheater the median ratio is significantly different from 0.7
 
-predict the sale price form features debias months or season
+w2009 <- wilcox.test(sold_2009$ratio, mu = 0.7, conf.int = TRUE)
+w2023 <- wilcox.test(sold_2023$ratio, mu = 0.7, conf.int = TRUE)
+w2024 <- wilcox.test(sold_2024$ratio, mu = 0.7, conf.int = TRUE)
+w2009; w2023; w2024
 
-try mds: multidimensional scaling
+ctest <- data.frame(NA, nrow = 3, ncol = 4)
+colnames(ctest) <- c("estimate", "conf.low", "conf.high")
+for (i in seq_along(list(w2009, w2023, w2024))) {
+  df <- list(w2009, w2023, w2024)[[i]]
+  ctest[i, ] <- c(df["estimate"]$estimate, df["conf.int"]$conf.int[1], df["conf.int"]$conf.int[2])
+}
+ctest$year <- c(2009, 2023, 2024)
+ctest
 
-r package https://cran.r-project.org/web/packages/gpairs/index.html
+plotCI(1:3, ctest$estimate, 
+       ui = ctest$conf.high, li = ctest$conf.low, 
+       pch = 19, col = "blue", xaxt = "n", xlab = "Year", ylab = "Assessed / Sale Price",)
+abline(h = 0.7, col = "red", lty = 2)
+axis(1, at = 1:3, labels = ctest$year)
 
-distance between points, reconstruct a map that preserves distances, to recover the map of the properties
+dev.copy2pdf(file = "figures/wilcox_ci.pdf", width = 7, height = 5)
+```
 
-clustering algorithms and regression on the clusters (k-means etc)
-
-**spatial**: debias number of bedrooms or bathrooms? to get a cleaner look of location, try continuous color bar. Could debias for bedrooms
-
-**weekenesses, from residuals etc, leads to more** Try rolling average more informative, do rolling average for 2023 and 2024, its the simplest nl model
-
-geom.smooth could be used, smooth rolling average

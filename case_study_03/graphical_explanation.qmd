@@ -184,7 +184,9 @@ leaf <- leaflet(df_map2024, options = leafletOptions(preferCanvas = TRUE)) %>%
 
 
 leaf
-#htmlwidgets::saveWidget(leaf, "hamden2024.html", selfcontained = TRUE)
+htmlwidgets::saveWidget(leaf, "figures/hamden2024.html", selfcontained = TRUE)
+mapshot(leaf file = paste0(getwd(), "figures/hamden2024.png")
+#dev.copy2pdf(file = "figures/2024_spatial.pdf", width = 7, height = 5)
 ```
 
 ```{r}
@@ -212,5 +214,7 @@ leaf <- leaflet(df_map2023, options = leafletOptions(preferCanvas = TRUE)) %>%
   )
 
 leaf
-#htmlwidgets::saveWidget(leaf, "hamden2023.html", selfcontained = TRUE)
+htmlwidgets::saveWidget(leaf, "figures/hamden2023.html", selfcontained = TRUE)
+mapshot(leaf file = paste0(getwd(), "figures/hamden2023.png")
+#dev.copy2pdf(file = "figures/2023_spatial.pdf", width = 7, height = 5)
 ```

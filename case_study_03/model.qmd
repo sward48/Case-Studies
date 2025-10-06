@@ -1,4 +1,11 @@
 ```{r}
+library(janitor)
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+library(scales)
+
 #read in the data
 sales_df <- read.csv('data/sales_scraped.csv')
 property_df <- readRDS('data/hamden.rds')
@@ -98,15 +105,37 @@ slope_bath <- slope_bath %>%
 se <- se.ranef(model)
 se_bath <- se$bath_factor
 #se_bath$bath_factor <- rownames(se_bath)
-se_bath <- se_bath %>%
-    clean_names() %>%
-    rename(se_intercept = intercept) %>%
-    rename(se_slope = year_factor2024)
+toplot <- cbind(slope_bath, se_bath)
 
 
-ggplot(slope_bath, aes(x = bath_factor, y = year_factor2024)) +
+ggplot(toplot, aes(x = bath_factor, y = slope)) +
   geom_point() +
+  geom_errorbar(aes(ymin=slope - year_factor2024, ymax=slope + year_factor2024)) +
   labs(x = "# of Baths",
        y = "Slope",
        title = "Slope of Baths for Mixed Effects Model")
+
+dev.copy2pdf(file = "figures/Bathroom_Slopes.pdf", width = 7, height = 5)
+
+
+re <- ranef(model, condVar = TRUE)
+slope_bed <- re$bed_factor
+slope_bed$bed_factor <- rownames(slope_bed)
+slope_bed <- slope_bed %>%
+    clean_names() %>%
+    rename(slope = year_factor2024)
+se <- se.ranef(model)
+se_bed <- se$bed_factor
+#se_bath$bath_factor <- rownames(se_bath)
+toplot <- cbind(slope_bed, se_bed)
+
+
+ggplot(toplot, aes(x = bed_factor, y = slope)) +
+  geom_point() +
+  geom_errorbar(aes(ymin=slope - year_factor2024, ymax=slope + year_factor2024)) +
+  labs(x = "# of Bedrooms",
+       y = "Slope",
+       title = "Slope of Bedrooms for Mixed Effects Model")
+
+dev.copy2pdf(file = "figures/Bedroom_Slopes.pdf", width = 7, height = 5)
 ```

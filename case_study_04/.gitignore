@@ -1,8 +1,0 @@
-# Ignore the folder with the raw html files
-Hamden_Sept2025/
-
-# Ignore the CT property csv file
-rawdata/Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv
-
-# Ignore figures directory
-figures/

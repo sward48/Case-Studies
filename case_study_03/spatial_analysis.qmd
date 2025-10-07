@@ -6,12 +6,17 @@ library(stringr)
 library(lubridate)
 library(ggplot2)
 library(scales)
+library(mapview)
 
 # other libraries needed (for the leaflet plot)
 library(readr)
 library(leaflet)
 library(htmltools)
 library(viridisLite)
+
+# make select() come from dplyr
+select <- dplyr::select
+
 
 sales_df <- read.csv("data/sales_scraped.csv", check.names = TRUE, stringsAsFactors = FALSE)
 property_df <- readRDS("data/hamden.RDS")
@@ -151,7 +156,7 @@ df_map <- df_map %>%
 
 #create the color palette
 pal <- colorFactor(
-  palette = c('black', 'red', 'blue'),
+  palette = c('chartreuse', 'red', 'blue'),
   domain  = df_map$ratio_cat,
   na.color = "#cccccc"
 )
@@ -160,30 +165,40 @@ pal <- colorFactor(
 df_map2024 <- df_map %>%
     filter(sale_year == 2024)
 
+
+bbox <- c(
+  lng1 = min(df_map2024$lon),
+  lat1 = min(df_map2024$lat),
+  lng2 = max(df_map2024$lon),
+  lat2 = max(df_map2024$lat)
+)
+
 leaf <- leaflet(df_map2024, options = leafletOptions(preferCanvas = TRUE)) %>%
   addProviderTiles(providers$CartoDB.Positron) %>%
   addCircleMarkers(
     lng = ~lon, lat = ~lat,
     radius = 5,
-    stroke = FALSE, fillOpacity = 0.5,
+    stroke = FALSE, fillOpacity = 0.8,
     fillColor = ~pal(ratio_cat),
     label = ~lapply(hover_label, HTML)
   ) %>%
   addLegend(
     position = "bottomright",
-    colors = c('blue', 'black', 'red'),
+    colors = c('blue', 'chartreuse', 'red'),
     labels = c('low', 'fair', 'high'),
     values = ~ratio,
     title = "Assessed / Sale",
     labFormat = labelFormat(digits = 2),
     opacity = 1
-  )
+  ) %>%
+  setView(lng = mean(df_map2024$lon),
+          lat = mean(df_map2024$lat)+0.015,
+          zoom = 12)
 
 
 leaf
 htmlwidgets::saveWidget(leaf, "figures/hamden2024.html", selfcontained = TRUE)
-#mapshot(leaf, file = paste0(getwd(), "figures/hamden2024.png"))
-#dev.copy2pdf(file = "figures/2024_spatial.pdf", width = 7, height = 5)
+mapshot2(leaf, file = "figures/hamden2024.png", delay = 2, zoom = 0.5, vheight = 600, vwidth = 600)
 ```
 
 ```{r}
@@ -196,22 +211,24 @@ leaf <- leaflet(df_map2023, options = leafletOptions(preferCanvas = TRUE)) %>%
   addCircleMarkers(
     lng = ~lon, lat = ~lat,
     radius = 5,
-    stroke = FALSE, fillOpacity = 0.5,
+    stroke = FALSE, fillOpacity = 0.8,
     fillColor = ~pal(ratio_cat),
     label = ~lapply(hover_label, HTML)
   ) %>%
   addLegend(
     position = "bottomright",
-    colors = c('red', 'black', 'blue'),
+    colors = c('red', 'chartreuse', 'blue'),
     labels = c('high', 'fair', 'low'),
     values = ~ratio,
     title = "Assessed / Sale",
     labFormat = labelFormat(digits = 2),
     opacity = 1
-  )
+  ) %>%
+  setView(lng = mean(df_map2023$lon),
+          lat = mean(df_map2023$lat)+0.015,
+          zoom = 12)
 
 leaf
 htmlwidgets::saveWidget(leaf, "figures/hamden2023.html", selfcontained = TRUE)
-#mapshot(leaf, file = paste0(getwd(), "figures/hamden2023.png"))
-#dev.copy2pdf(file = "figures/2023_spatial.pdf", width = 7, height = 5)
+mapshot2(leaf, file = "figures/hamden2023.png", delay = 2, zoom = 0.5, vheight = 600, vwidth = 600)
 ```

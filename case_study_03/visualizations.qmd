@@ -25,10 +25,6 @@ We could potentially use the 2023 data to do the analysis, but maybe we'd want m
 
 [This .zip file](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/ERDOKwhS_s1Bn2f3GFAg5gABBrtaf-g-bAsOetpW44j7yA?e=QHhBRf) contains one HTML file for almost all of the properties in Hamden, so you don't have to spend the time to scrape them all. Extract the information you need to assess the "fairness" of the appraised values that were determined by Vision. To extract that information, you can likely use some combination of regular expressions and functions that read HTML tables like those summarized here: <https://bmacgtpm.github.io/notes/parsing-html-tables.html>.
 
-# Data sources
-
-Folder rawdata: \* `centroids.no.geometry.rds`: centroids of properties in CT (from Brian) \* `Connecticut_CAMA_and_Parcel_Layer_3895368049124948111.csv`: property data for CT from the [link](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/EVAE5NykXsdLlqI4ufT6nBwBA0_oJh1jqjPioEMQ_G7Fmg?e=qoYauD) provided by Brian \* Hamden_Sept2025: - Downloaded from the provided zip file: [This .zip file](https://yaleedu-my.sharepoint.com/:u:/g/personal/brian_macdonald_yale_edu/ERDOKwhS_s1Bn2f3GFAg5gABBrtaf-g-bAsOetpW44j7yA?e=QHhBRf)
-
 Folder data: - `sales_scraped.csv`: sales data scraped from the HTML files
 
 ```{r}
@@ -235,7 +231,10 @@ box()
 legend("topright", legend = c("2023", "2024"), fill = c("lightblue", "lightpink"))
 # save as pdf
 dev.copy2pdf(file = "figures/boxplot_bedrooms.pdf", width = 7, height = 5)
+```
 
+
+```{r}
 # BATHROOMS-------------------------------------------------------------  
 # total = full + 0.5 * half; bucket to 6 categories
 add_bath_groups <- function(df) {
@@ -285,9 +284,10 @@ box(); legend("topright", legend = c("2023", "2024"),
 
 # save
 dev.copy2pdf(file = "figures/boxplot_bathrooms.pdf", width = 7, height = 5)
+```
 
 
-                       
+```{r}                
 # OVERALL ROOMS-------------------------------------------------------------       
 # --- Rooms: bucket to ≤4, 5, 6, 7, 8, ≥9
 add_room_groups <- function(df) {
@@ -354,12 +354,13 @@ boot_median_ci <- function(x, B = 2000, conf = 0.95) {
 
 # --- summarise one dataset by a factor column into median + CI ----------------
 summarise_group_median <- function(df, group_col, resp = "ratio", levels = NULL, year_label = "2024") {
-  g <- rlang::ensym(group_col)
+  group_col <- as.character(substitute(group_col))
+  
   out <- df %>%
-    filter(is.finite(.data[[resp]]), !is.na(!!g)) %>%
-    group_by(!!g) %>%
+    filter(is.finite(.data[[resp]]), !is.na(.data[[group_col]])) %>%
+    group_by(.data[[group_col]]) %>%
     summarise(
-      n = dplyr::n(),
+      n = n(),
       ci = list(boot_median_ci(.data[[resp]])),
       .groups = "drop"
     ) %>%
@@ -373,7 +374,7 @@ summarise_group_median <- function(df, group_col, resp = "ratio", levels = NULL,
 
   # enforce nice ordering if levels provided
   if (!is.null(levels)) {
-    out[[rlang::as_name(g)]] <- factor(out[[rlang::as_name(g)]], levels = levels)
+    out[[group_col]] <- factor(out[[group_col]], levels = levels)
   }
   out
 }
@@ -433,7 +434,6 @@ ggplot(rooms_sum, aes(x = x_num, y = med, color = year, fill = year, group = yea
 
 dev.copy2pdf(file = "figures/median_rooms.pdf", width = 7, height = 5)
 
-dev.copy2pdf(file = "figures/median_rooms.pdf", width = 7, height = 5)
 ```
 
 ```{r}

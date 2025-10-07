@@ -6,6 +6,13 @@ library(lubridate)
 library(ggplot2)
 library(scales)
 
+# for the mixed effects model
+library(lme4)
+library(arm)
+
+# make select() come from dplyr
+select <- dplyr::select
+
 #read in the data
 sales_df <- read.csv('data/sales_scraped.csv')
 property_df <- readRDS('data/hamden.rds')
@@ -21,10 +28,12 @@ property_keep <- c(
   "number_of_baths", "number_of_half_baths", "occupancy", "ayb", "eyb",
   "shape_area", "shape_length"
 )
+
 property_df <- property_df %>%
-  mutate(pid = as.integer(str_extract(link, "(?<=^35650-)\\d+")))  %>%
-  select(any_of(c(property_keep, "pid"))) %>% 
-  filter(!is.na(pid))
+    mutate(pid = as.integer(gsub("35650-", "", link))) %>%
+    filter(!is.na(pid)) %>%
+    select(all_of(property_keep))
+
 # merge on pid (keep all properties; bring in sales/appraisal cols)
 merged_df <- property_df %>% left_join(sales_df, by = "pid")
 str(merged_df)
@@ -89,8 +98,6 @@ summary(model)
 
 ```{r}
 #make a mixed effects model using the factor variables
-library(lme4)
-library(arm)
 
 model <- lmer(log(assessed_total) ~ (year_factor | bath_factor) + 
     (year_factor | bed_factor) + living_area + land_acres, data = df)

@@ -14,11 +14,23 @@ print("Running main script...")
 
 system("quarto render scrape_html.qmd")
 system("quarto render visualizations.qmd")
+system("quarto render spatial_analysis.qmd")
+system("quarto render model.qmd")
 
+# ==============
+# Cleanup rendering files and folders
 
 # delete the html files and folders created
 file.remove("scrape_html.html")
 file.remove("visualizations.html")
+file.remove("spatial_analysis.html")
+file.remove("model.html")
 unlink("scrape_html_files", recursive = TRUE)
 unlink("visualizations_files", recursive = TRUE)
+unlink("spatial_analysis_files", recursive = TRUE)
+unlink("model_files", recursive = TRUE)
+
+# delete html folders under files
+unlink("figures/hamden2023_files", recursive = TRUE)
+unlink("figures/hamden2024_files", recursive = TRUE)
 
